@@ -1,21 +1,16 @@
-package demo;
+package com.example.review.inventory;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
-@SpringBootApplication
 @RestController
+@RequestMapping("/inventory")
 public class SimpleInventoryApp {
 
-    // 간단 모델 (내부 static class)
     static class Item {
         Long id; String sku; String name; String description;
         Item(Long id, String sku, String name, String description) {
@@ -36,54 +31,37 @@ public class SimpleInventoryApp {
         }
     }
 
-    // 메모리 데이터
     private static final Map<Long, Item> ITEMS = new LinkedHashMap<>();
     private static final Map<Long, Store> STORES = new LinkedHashMap<>();
     private static final List<Inventory> INVENTORIES = new ArrayList<>();
     static {
-        // 1) 상품(야채/과일 등) : id, sku, name, description
+        // 상품
         ITEMS.put(1L, new Item(1L,"CABB-01","양배추 1통","국내산 양배추"));
         ITEMS.put(2L, new Item(2L,"LEEK-01","대파 1단","신선한 대파"));
         ITEMS.put(3L, new Item(3L,"LETT-200","상추 200g","쌈용 상추"));
         ITEMS.put(4L, new Item(4L,"TOMA-500","방울토마토 500g","달콤한 방울토마토"));
         ITEMS.put(5L, new Item(5L,"RAD-01","무 1개","국내산 무"));
-
-        // 2) 지점(시장 내 점포) : id, name, address
+        // 지점
         STORES.put(1L, new Store(1L,"싱싱채소가게","○○시장 A구역 12번"));
         STORES.put(2L, new Store(2L,"알뜰과일","○○시장 B구역 3번"));
         STORES.put(3L, new Store(3L,"시장입구야채","○○시장 입구 좌판 5"));
         STORES.put(4L, new Store(4L,"할머니채소","○○시장 C구역 9번"));
         STORES.put(5L, new Store(5L,"청과 1호","○○시장 중앙로 18"));
-
-        // 3) 재고(어디서 파는지 + 남은 개수) : id, itemId, storeId, quantity, updatedAt
-        // 양배추
-        INVENTORIES.add(new Inventory(1L, 1L, 1L, 7,  Instant.now())); // 양배추 @ 싱싱채소가게 7통
-        INVENTORIES.add(new Inventory(2L, 1L, 3L, 2,  Instant.now())); // 양배추 @ 시장입구야채 2통
-        INVENTORIES.add(new Inventory(3L, 1L, 4L, 0,  Instant.now())); // 양배추 @ 할머니채소 품절
-
-        // 대파
-        INVENTORIES.add(new Inventory(4L, 2L, 1L, 15, Instant.now())); // 대파 @ 싱싱채소가게 15단
-        INVENTORIES.add(new Inventory(5L, 2L, 4L, 6,  Instant.now())); // 대파 @ 할머니채소 6단
-
-        // 상추
-        INVENTORIES.add(new Inventory(6L, 3L, 1L, 10, Instant.now())); // 상추 @ 싱싱채소가게 10팩
-        INVENTORIES.add(new Inventory(7L, 3L, 5L, 4,  Instant.now())); // 상추 @ 청과1호 4팩
-
-        // 방울토마토
-        INVENTORIES.add(new Inventory(8L, 4L, 2L, 12, Instant.now())); // 토마토 @ 알뜰과일 12팩
-        INVENTORIES.add(new Inventory(9L, 4L, 5L, 5,  Instant.now()));  // 토마토 @ 청과1호 5팩
-
-        // 무
-        INVENTORIES.add(new Inventory(10L, 5L, 3L, 3, Instant.now())); // 무 @ 시장입구야채 3개
-        INVENTORIES.add(new Inventory(11L, 5L, 1L, 0, Instant.now())); // 무 @ 싱싱채소가게 품절
+        // 재고
+        INVENTORIES.add(new Inventory(1L, 1L, 1L, 7,  Instant.now()));
+        INVENTORIES.add(new Inventory(2L, 1L, 3L, 2,  Instant.now()));
+        INVENTORIES.add(new Inventory(3L, 1L, 4L, 0,  Instant.now()));
+        INVENTORIES.add(new Inventory(4L, 2L, 1L, 15, Instant.now()));
+        INVENTORIES.add(new Inventory(5L, 2L, 4L, 6,  Instant.now()));
+        INVENTORIES.add(new Inventory(6L, 3L, 1L, 10, Instant.now()));
+        INVENTORIES.add(new Inventory(7L, 3L, 5L, 4,  Instant.now()));
+        INVENTORIES.add(new Inventory(8L, 4L, 2L, 12, Instant.now()));
+        INVENTORIES.add(new Inventory(9L, 4L, 5L, 5,  Instant.now()));
+        INVENTORIES.add(new Inventory(10L, 5L, 3L, 3, Instant.now()));
+        INVENTORIES.add(new Inventory(11L, 5L, 1L, 0, Instant.now()));
     }
 
-    public static void main(String[] args) {
-        SpringApplication.run(SimpleInventoryApp.class, args);
-    }
-
-    // 1) 검색 페이지 (HTML)
-    @GetMapping(value = "/", produces = MediaType.TEXT_HTML_VALUE)
+    @GetMapping(value = {"", "/"}, produces = MediaType.TEXT_HTML_VALUE)
     public String page() {
         return """
 <!doctype html>
@@ -111,10 +89,13 @@ public class SimpleInventoryApp {
     th, td { border-top:1px solid #eee; padding:8px; text-align:left; font-size:14px; }
     th { background:#f7f8fb; }
     .muted { color:#777; font-size:12px; }
+    .nav { margin-bottom: 16px; }
+    .nav a { color:#2d6cdf; text-decoration:none; }
   </style>
 </head>
 <body>
   <div class="wrap">
+    <div class="nav"><a href="/home">← 메인으로</a></div>
     <h1>물품 재고 검색</h1>
     <div class="search-row">
       <input id="q" type="text" placeholder="예) 무, 양배추, TOMA-500">
@@ -170,7 +151,7 @@ public class SimpleInventoryApp {
       btn.disabled = true;
       result.innerHTML = '<div class="muted">검색 중...</div>';
       try{
-        const res = await fetch('/search?q=' + encodeURIComponent(q));
+        const res = await fetch('/inventory/search?q=' + encodeURIComponent(q));
         const data = await res.json();
         render(data);
       }catch(e){
@@ -188,7 +169,6 @@ public class SimpleInventoryApp {
 """;
     }
 
-    // 2) 검색 API
     @GetMapping(value = "/search", produces = MediaType.APPLICATION_JSON_VALUE)
     public Map<String, Object> search(@RequestParam("q") String q) {
         String keyword = q == null ? "" : q.trim().toLowerCase(Locale.ROOT);
@@ -235,4 +215,3 @@ public class SimpleInventoryApp {
         return Map.of("query", q, "results", results, "count", results.size());
     }
 }
-
